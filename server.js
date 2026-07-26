@@ -1,26 +1,17 @@
 /**
- * Marquee — movie suggestions based on where you are.
+ * Marquee — "popular in your area" movie screen.
  *
- * The visitor taps a clearly-labelled button, the browser asks their
- * permission, and on Allow we use their coordinates to:
- *   1. name their city   (OpenStreetMap Nominatim — free, no key)
- *   2. list nearby cinemas (OpenStreetMap Overpass — free, no key)
- *   3. suggest now-playing movies (TMDB if a key is set, else a sample list)
- *
- * The location is used to answer the visitor and is NOT stored. There is no
- * owner-only capture log — the person sees their own results, which is the
- * whole point of a recommendation feature.
+ * The visitor is asked up front ("see what's popular in your area?"). On Allow,
+ * their coordinates are turned into a region, and we show the movies popular
+ * there. The location is used to answer the visitor and is NOT stored.
  */
 
 const express = require("express");
-const path = require("path");
-
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.set("trust proxy", true);
 app.use(express.json());
-// Serve the front-end files that sit next to this file (flat layout).
 app.use(express.static(__dirname));
 
 const UA = "MarqueeDemo/1.0 (student project)";
@@ -35,7 +26,7 @@ function coords(req, res) {
   return { lat, lng };
 }
 
-// 1. City / country from coordinates.
+// Region from coordinates (city + country code).
 app.get("/api/place", async (req, res) => {
   const c = coords(req, res);
   if (!c) return;
@@ -55,81 +46,63 @@ app.get("/api/place", async (req, res) => {
   }
 });
 
-// 2. Nearby cinemas (within ~20 km).
-app.get("/api/cinemas", async (req, res) => {
-  const c = coords(req, res);
-  if (!c) return;
-  const q =
-    `[out:json][timeout:25];(` +
-    `node["amenity"="cinema"](around:20000,${c.lat},${c.lng});` +
-    `way["amenity"="cinema"](around:20000,${c.lat},${c.lng});` +
-    `);out center 40;`;
-  try {
-    const r = await fetch("https://overpass-api.de/api/interpreter", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": UA },
-      body: "data=" + encodeURIComponent(q),
-    });
-    const j = await r.json();
-    const seen = new Set();
-    const cinemas = [];
-    for (const el of j.elements || []) {
-      const lat = el.lat ?? el.center?.lat;
-      const lng = el.lon ?? el.center?.lon;
-      const name = el.tags?.name;
-      if (lat == null || lng == null || !name || seen.has(name)) continue;
-      seen.add(name);
-      cinemas.push({ name, lat, lng });
-    }
-    res.json({ cinemas });
-  } catch {
-    res.json({ cinemas: [] });
-  }
-});
-
-// 3. Now-playing movies for the visitor's country (TMDB), with a sample fallback.
-const SAMPLE_MOVIES = [
-  { title: "Dune: Part Two", year: "2024", rating: 8.2, poster: null,
+// Popular movies for the visitor's region (TMDB), with a sample fallback.
+const SAMPLE = [
+  { title: "Dune: Part Two", year: "2024", rating: 8.2, poster: null, backdrop: null,
     blurb: "Paul Atreides unites with the Fremen to wage war against House Harkonnen." },
-  { title: "Inside Out 2", year: "2024", rating: 7.6, poster: null,
+  { title: "Inside Out 2", year: "2024", rating: 7.6, poster: null, backdrop: null,
     blurb: "Riley's mind gains new emotions as she navigates her teenage years." },
-  { title: "Oppenheimer", year: "2023", rating: 8.1, poster: null,
+  { title: "Oppenheimer", year: "2023", rating: 8.1, poster: null, backdrop: null,
     blurb: "The story of the physicist behind the first atomic bomb." },
-  { title: "Spider-Man: Across the Spider-Verse", year: "2023", rating: 8.5, poster: null,
+  { title: "Spider-Man: Across the Spider-Verse", year: "2023", rating: 8.5, poster: null, backdrop: null,
     blurb: "Miles Morales journeys across the multiverse of Spider-People." },
-  { title: "Everything Everywhere All at Once", year: "2022", rating: 7.8, poster: null,
+  { title: "Everything Everywhere All at Once", year: "2022", rating: 7.8, poster: null, backdrop: null,
     blurb: "A laundromat owner is swept into a multiverse-spanning adventure." },
-  { title: "Top Gun: Maverick", year: "2022", rating: 8.2, poster: null,
+  { title: "Top Gun: Maverick", year: "2022", rating: 8.2, poster: null, backdrop: null,
     blurb: "Maverick trains a new squad for a near-impossible mission." },
-  { title: "The Batman", year: "2022", rating: 7.8, poster: null,
+  { title: "The Batman", year: "2022", rating: 7.8, poster: null, backdrop: null,
     blurb: "A young Batman hunts the Riddler through a corrupt Gotham." },
-  { title: "Barbie", year: "2023", rating: 6.9, poster: null,
+  { title: "Barbie", year: "2023", rating: 6.9, poster: null, backdrop: null,
     blurb: "Barbie leaves Barbie Land on a journey of self-discovery." },
 ];
+
+function mapMovie(m) {
+  return {
+    title: m.title,
+    year: (m.release_date || "").slice(0, 4),
+    rating: m.vote_average,
+    blurb: m.overview,
+    poster: m.poster_path ? `https://image.tmdb.org/t/p/w342${m.poster_path}` : null,
+    backdrop: m.backdrop_path ? `https://image.tmdb.org/t/p/w1280${m.backdrop_path}` : null,
+  };
+}
+
+async function tmdb(pathName, region, key) {
+  const url =
+    `https://api.themoviedb.org/3/movie/${pathName}?api_key=${key}` +
+    (region ? `&region=${region}` : "");
+  const r = await fetch(url);
+  const j = await r.json();
+  return (j.results || []).filter((m) => m.poster_path).slice(0, 12).map(mapMovie);
+}
 
 app.get("/api/movies", async (req, res) => {
   const region = (req.query.region || "").toUpperCase().slice(0, 2);
   const key = process.env.TMDB_API_KEY;
   if (key) {
     try {
-      const url =
-        `https://api.themoviedb.org/3/movie/now_playing?api_key=${key}` +
-        (region ? `&region=${region}` : "");
-      const r = await fetch(url);
-      const j = await r.json();
-      const movies = (j.results || []).slice(0, 8).map((m) => ({
-        title: m.title,
-        year: (m.release_date || "").slice(0, 4),
-        rating: m.vote_average,
-        blurb: m.overview,
-        poster: m.poster_path ? `https://image.tmdb.org/t/p/w200${m.poster_path}` : null,
-      }));
-      if (movies.length) return res.json({ source: "now-playing", movies });
+      const [popular, nowPlaying] = await Promise.all([
+        tmdb("popular", region, key),
+        tmdb("now_playing", region, key),
+      ]);
+      if (popular.length || nowPlaying.length) {
+        return res.json({ source: "live", popular, nowPlaying });
+      }
     } catch {
-      /* fall through to sample list */
+      /* fall through to sample */
     }
   }
-  res.json({ source: "sample", movies: SAMPLE_MOVIES });
+  res.json({ source: "sample", popular: SAMPLE, nowPlaying: [] });
 });
 
 app.listen(PORT, () => {
