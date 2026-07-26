@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Fix · location capture</title>
+  <title>Marquee · movies near you</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -16,13 +16,11 @@
 <body>
   <main class="console">
     <header class="masthead">
-      <span class="wordmark">FIX</span>
-      <span class="eyebrow">positioning demo</span>
-      <a class="results-link" href="results.html">captures &rsaquo;</a>
+      <span class="wordmark">MARQUEE</span>
+      <span class="eyebrow">movies near you</span>
     </header>
 
     <section class="panel">
-      <!-- Signature element: the reticle. Idle = searching, locked = solid. -->
       <div class="reticle" id="reticle" data-state="idle" aria-hidden="true">
         <div class="ring ring-outer"></div>
         <div class="ring ring-search"></div>
@@ -32,27 +30,13 @@
       </div>
 
       <div class="readout">
-        <p class="lede">Getting your exact position needs your say-so.</p>
+        <p class="lede">Suggest movies based on your location.</p>
         <p class="body">
-          When you tap below, your browser asks whether to share your location.
-          Allow it and this reads GPS-level coordinates. Decline and it falls back
-          to an approximate fix from your network address.
+          Tap below and your browser will ask to share your location. Allow it and
+          this finds the cinemas closest to you and what's playing now. Nothing is
+          shared until you say yes, and the results are shown to you here.
         </p>
-
-        <button id="shareBtn" class="cta">Share my location</button>
-
-        <dl class="coords" id="coords" hidden>
-          <div class="coord-row">
-            <dt>lat</dt><dd id="outLat">—</dd>
-          </div>
-          <div class="coord-row">
-            <dt>lng</dt><dd id="outLng">—</dd>
-          </div>
-          <div class="coord-row">
-            <dt>±</dt><dd id="outAcc">—</dd>
-          </div>
-        </dl>
-
+        <button id="shareBtn" class="cta">Suggest movies near me</button>
         <p class="status" id="status" role="status" aria-live="polite"></p>
       </div>
     </section>
@@ -60,6 +44,17 @@
     <section class="map-wrap" id="mapWrap" hidden>
       <div id="map"></div>
       <div class="source-tag" id="sourceTag"></div>
+    </section>
+
+    <section class="results" id="cinemasSection" hidden>
+      <h2 class="section-title">Theaters near you</h2>
+      <ul class="cinema-list" id="cinemaList"></ul>
+    </section>
+
+    <section class="results" id="moviesSection" hidden>
+      <h2 class="section-title" id="moviesTitle">Playing now</h2>
+      <div class="movie-grid" id="movieGrid"></div>
+      <p class="fineprint" id="moviesNote"></p>
     </section>
   </main>
 
