@@ -47,9 +47,17 @@ function geoError(err) {
 }
 
 // --- helpers ------------------------------------------------------------
-async function getJSON(url) {
-  try { const r = await fetch(url); return await r.json(); }
-  catch { return null; }
+async function getJSON(url, ms = 9000) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try {
+    const r = await fetch(url, { signal: ctrl.signal });
+    return await r.json();
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(t);
+  }
 }
 function esc(s) {
   return String(s == null ? "" : s).replace(/[&<>"]/g, (c) =>
