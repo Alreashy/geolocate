@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fix · captures</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .captures-head { display:flex; align-items:baseline; gap:14px; padding:22px 0; }
+    .captures-head h1 {
+      font-family: var(--display); font-weight:700; font-size:20px;
+      letter-spacing:0.04em; margin:0;
+    }
+    .count { font-family: var(--mono); font-size:12px; color: var(--fog); }
+    .back { margin-left:auto; font-family:var(--mono); font-size:12px;
+            letter-spacing:0.16em; text-transform:uppercase; color:var(--teal);
+            text-decoration:none; }
+    #allmap { height:340px; border:1px solid var(--line); border-radius:var(--radius);
+              overflow:hidden; background:var(--ink-2); margin-bottom:24px; }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th, td { text-align:left; padding:10px 12px; border-bottom:1px solid var(--line);
+             font-family: var(--mono); }
+    th { color: var(--fog); font-weight:500; letter-spacing:0.08em;
+         text-transform:uppercase; font-size:11px; }
+    td { color: var(--text); vertical-align:top; }
+    .pill { display:inline-block; padding:2px 9px; border-radius:999px;
+            font-size:11px; letter-spacing:0.06em; }
+    .pill.gps { color: var(--teal); border:1px solid var(--teal); }
+    .pill.ip  { color: var(--amber); border:1px solid var(--amber); }
+    .empty { font-family:var(--mono); color:var(--fog); padding:40px 0; text-align:center; }
+  </style>
+</head>
+<body>
+  <main class="console">
+    <div class="captures-head">
+      <h1>CAPTURES</h1>
+      <span class="count" id="count"></span>
+      <a class="back" href="index.html">&lsaquo; back</a>
+    </div>
+
+    <div id="allmap"></div>
+    <div id="tableWrap"></div>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="results.js"></script>
+</body>
+</html>
