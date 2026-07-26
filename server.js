@@ -16,6 +16,17 @@ app.use(express.static(__dirname));
 
 const UA = "MarqueeDemo/1.0 (student project)";
 
+// Fetch with a hard timeout so a slow upstream service can't hang the request.
+async function fetchWithTimeout(url, options = {}, ms = 6000) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(url, { ...options, signal: ctrl.signal });
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 function coords(req, res) {
   const lat = parseFloat(req.query.lat);
   const lng = parseFloat(req.query.lng);
@@ -33,7 +44,7 @@ app.get("/api/place", async (req, res) => {
   try {
     const url =
       `https://nominatim.openstreetmap.org/reverse?lat=${c.lat}&lon=${c.lng}&format=json&zoom=10`;
-    const r = await fetch(url, { headers: { "User-Agent": UA } });
+    const r = await fetchWithTimeout(url, { headers: { "User-Agent": UA } });
     const j = await r.json();
     const a = j.address || {};
     res.json({
@@ -81,7 +92,7 @@ async function tmdb(pathName, region, key) {
   const url =
     `https://api.themoviedb.org/3/movie/${pathName}?api_key=${key}` +
     (region ? `&region=${region}` : "");
-  const r = await fetch(url);
+  const r = await fetchWithTimeout(url);
   const j = await r.json();
   return (j.results || []).filter((m) => m.poster_path).slice(0, 12).map(mapMovie);
 }
