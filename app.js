@@ -123,15 +123,16 @@ async function run() {
     return;
   }
 
+  const isSample = data.source === "sample";
   const featured = popular[0] || nowPlaying[0];
-  renderHero(featured, place.country);
+  renderHero(featured, isSample ? null : place.country);
 
-  rowsEl.innerHTML =
-    renderRow(place.country ? `Popular in ${place.country}` : "Popular now", popular) +
-    renderRow("In theaters near you", nowPlaying);
+  const row1 = isSample ? "Popular picks" : (place.country ? `Popular in ${place.country}` : "Popular now");
+  const row2 = isSample ? "Critically acclaimed" : "In theaters near you";
+  rowsEl.innerHTML = renderRow(row1, popular) + renderRow(row2, nowPlaying);
 
-  noteEl.textContent = data.source === "sample"
-    ? "Showing sample titles. Add a free TMDB key on the server for live popularity in your region."
+  noteEl.textContent = isSample
+    ? "A curated selection of popular and acclaimed films."
     : `Region set from your location${place.city ? ` (${place.city})` : ""}. Data from TMDB.`;
 
   gate.hidden = true;
