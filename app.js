@@ -97,6 +97,27 @@ function renderRow(title, movies) {
 }
 
 // --- flow ---------------------------------------------------------------
+function showContent(data, place) {
+  const isSample = data.source === "sample";
+  const popular = data.popular || [];
+  const nowPlaying = data.nowPlaying || [];
+  const country = (place && place.country) || null;
+
+  renderHero(popular[0] || nowPlaying[0], isSample ? null : country);
+
+  const row1 = isSample ? "Popular picks" : (country ? `Popular in ${country}` : "Popular now");
+  const row2 = isSample ? "Critically acclaimed" : "In theaters near you";
+  rowsEl.innerHTML = renderRow(row1, popular) + renderRow(row2, nowPlaying);
+
+  noteEl.textContent = isSample
+    ? "A curated selection of popular and acclaimed films."
+    : `Region set from your location${place && place.city ? ` (${place.city})` : ""}. Data from TMDB.`;
+
+  gate.hidden = true;
+  content.hidden = false;
+  window.scrollTo(0, 0);
+}
+
 async function run() {
   if (!("geolocation" in navigator)) {
     gateMsg("This browser doesn't support location.", true);
@@ -112,32 +133,25 @@ async function run() {
   const { latitude: lat, longitude: lng } = pos.coords;
   gateMsg("Finding what's popular near you…");
 
-  const place = (await getJSON(`/api/place?lat=${lat}&lng=${lng}`)) || {};
-  const data = (await getJSON(`/api/movies?region=${place.countryCode || ""}`)) || {};
-  const popular = data.popular || [];
-  const nowPlaying = data.nowPlaying || [];
-
-  if (!popular.length && !nowPlaying.length) {
+  // Load movies right away — this does NOT depend on the city lookup, so a slow
+  // geocoding service can never hold up the page.
+  const data = (await getJSON(`/api/movies?region=`)) || {};
+  if (!(data.popular || []).length && !(data.nowPlaying || []).length) {
     gateMsg("Couldn't load movies right now. Try again in a moment.", true);
     consentBtn.disabled = false;
     return;
   }
+  showContent(data, null);
 
-  const isSample = data.source === "sample";
-  const featured = popular[0] || nowPlaying[0];
-  renderHero(featured, isSample ? null : place.country);
-
-  const row1 = isSample ? "Popular picks" : (place.country ? `Popular in ${place.country}` : "Popular now");
-  const row2 = isSample ? "Critically acclaimed" : "In theaters near you";
-  rowsEl.innerHTML = renderRow(row1, popular) + renderRow(row2, nowPlaying);
-
-  noteEl.textContent = isSample
-    ? "A curated selection of popular and acclaimed films."
-    : `Region set from your location${place.city ? ` (${place.city})` : ""}. Data from TMDB.`;
-
-  gate.hidden = true;
-  content.hidden = false;
-  window.scrollTo(0, 0);
+  // Only when live data is in use do we bother resolving the region, and even
+  // then it just refines the labels in the background — it can't block anything.
+  if (data.source === "live") {
+    const place = await getJSON(`/api/place?lat=${lat}&lng=${lng}`);
+    if (place && place.countryCode) {
+      const better = await getJSON(`/api/movies?region=${place.countryCode}`);
+      showContent(better && (better.popular || []).length ? better : data, place);
+    }
+  }
 }
 
 consentBtn.addEventListener("click", run);
